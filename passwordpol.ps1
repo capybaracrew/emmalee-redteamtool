@@ -29,21 +29,6 @@ function Test-PasswordRules {
     }
     return $true
 }
-
-function Watch-PasswordChanges {
-    Write-Host "[*] Monitoring password changes..."
-    while ($true) {
-        Start-Sleep -Seconds 10
-        $Events = Get-WinEvent -LogName "Security" -FilterXPath "*[System[(EventID=4723 or EventID=4724)]]" | Sort-Object TimeCreated -Descending | Select-Object -First 5
-        foreach ($Event in $Events) {
-            $NewPassword = "PLACEHOLDER"  # Modify this for deeper integration with actual password retrieval
-            if (-not (Test-PasswordRules -NewPassword $NewPassword)) {
-                Write-Host "[!] Password policy violated. Displaying pop-up."
-            }
-        }
-    }
-}
-
 function Set-RegistryPersistence {
     Write-Host "[*] Adding registry persistence..."
     $scriptPath = "C:\Windows\System32\passwordpol.ps1"
@@ -66,4 +51,3 @@ function Set-ScheduledTaskPersistence {
 
 Set-RegistryPersistence
 Set-ScheduledTaskPersistence
-Start-Job -ScriptBlock { Watch-PasswordChanges }
