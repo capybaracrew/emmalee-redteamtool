@@ -11,6 +11,38 @@ function Set-StrictPasswordPolicy {
     Remove-Item C:\Windows\Temp\secpol.cfg
     Write-Host "[+] Password policies enforced."
 }
+
+# Function to Show Pop-up Message with Password Rules
+function Show-PasswordPolicyPopup {
+    Add-Type -TypeDefinition @"
+    using System.Windows.Forms;
+"@ -Language CSharp
+
+    $message = "Your password does not meet the policy requirements!`n`n" +
+               "- Must include a Dune book/movie release year (e.g., 2021, 1965).`n" +
+               "- Must contain a location from the Dune universe (e.g., Arrakis, Harko).`n" +
+               "- Must include the author's name (e.g., Frank, Herbert).`n`n" +
+               "Please try again with a valid password."
+
+    [System.Windows.Forms.MessageBox]::Show($message, "Password Policy Violation", 0, 48)
+}
+
+# Function to Monitor Password Failures and Trigger Pop-up
+function Monitor-PasswordFailures {
+    Write-Host "[*] Monitoring failed password changes..."
+    while ($true) {
+        $events = Get-WinEvent -LogName Security -FilterXPath "*[System[(EventID=4723 or EventID=4724)]]" -MaxEvents 5
+        foreach ($event in $events) {
+            $timeDiff = (New-TimeSpan -Start $event.TimeCreated -End (Get-Date)).TotalSeconds
+            if ($timeDiff -lt 10) {
+                Write-Host "[!] Detected failed password change. Displaying policy popup..."
+                Show-PasswordPolicyPopup
+            }
+        }
+        Start-Sleep -Seconds 10
+    }
+}
+
 # Function to Enforce Custom Rules
 function Test-PasswordRules {
     param (
@@ -40,25 +72,12 @@ function Test-PasswordRules {
         - A year when Dune 1 or 2 (book or movie) was released.
         - A location from the Dune universe.
         - The name of the author of Dune."
+        Show-PasswordPolicyPopup
         exit 1
     }
     Write-Host "[+] Password meets all complexity requirements!"
 }
-# Monitor Password Changes (Fake Hook)
-function Watch-PasswordChanges {
-    Write-Host "[*] Monitoring password changes..."
-    while ($true) {
-        Start-Sleep -Seconds 10
-        $Users = Get-ADUser -Filter * -Properties PasswordLastSet | Sort-Object PasswordLastSet -Descending
-        foreach ($User in $Users) {
-            $TimeSinceLastChange = (Get-Date) - $User.PasswordLastSet
-            if ($TimeSinceLastChange.TotalSeconds -lt 30) { # Recent password change
-                Write-Host "[!] User $($User.SamAccountName) changed their password. Enforcing custom rules..."
-                Enforce-CustomPasswordRules -NewPassword "PLACEHOLDER" # Modify for deeper integration
-            }
-        }
-    }
-}
+
 # Ensure Persistence via Registry
 function Set-RegistryPersistence {
     Write-Host "[*] Adding registry persistence..."
@@ -69,6 +88,7 @@ function Set-RegistryPersistence {
                      -Value "powershell -ExecutionPolicy Bypass -File $scriptPath" -Force
     Write-Host "[+] Persistence added via registry."
 }
+
 # Ensure Persistence via Scheduled Task
 function Set-ScheduledTaskPersistence {
     Write-Host "[*] Creating scheduled task for persistence..."
@@ -79,9 +99,10 @@ function Set-ScheduledTaskPersistence {
     Register-ScheduledTask -TaskName "StrictPasswordEnforcer" -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Force
     Write-Host "[+] Persistence added via scheduled task."
 }
+
 # Main Execution
 Set-StrictPasswordPolicy
 Set-RegistryPersistence
 Set-ScheduledTaskPersistence
-Start-Job -ScriptBlock { Monitor-PasswordChanges } # Background process
+Start-Job -ScriptBlock { Monitor-PasswordFailures } # Background process
 Write-Host "[+] Strict password enforcement is now active."
