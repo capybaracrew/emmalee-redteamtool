@@ -1,3 +1,6 @@
+# Ensure necessary assemblies are loaded for pop-ups
+Add-Type -AssemblyName PresentationFramework
+
 function Show-PasswordPolicyPopup {
     $message = @"
 Your password must meet the following requirements:
@@ -14,40 +17,46 @@ function Test-PasswordRules {
         [Parameter(Mandatory = $true)]
         [SecureString]$NewPassword
     )
-    
+
+    # Convert SecureString to PlainText
+    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($NewPassword)
+    $PlainTextPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+
+    # Define Dune-related weak password elements
     $BookMovieDates = @("2021", "2024", "1965", "1969")
     $AuthorNames = @("Frank", "frank", "Herbert", "herbert", "FrankHerbert", "frankherbert")
     $DuneLocations = @("Arrakis", "Arrakeen", "Bandalong", "Barony", "Cala", "Dimitri", "Harko", "Niubbe", "Starda")
-    
-    $HasDate = $BookMovieDates | Where-Object { $NewPassword -match $_ }
-    $HasLocation = $DuneLocations | Where-Object { $NewPassword -match $_ }
-    $HasAuthor = $AuthorNames | Where-Object { $NewPassword -match $_ }
-    
+
+    # Check if password contains weak elements
+    $HasDate = $BookMovieDates | Where-Object { $PlainTextPassword -match $_ }
+    $HasLocation = $DuneLocations | Where-Object { $PlainTextPassword -match $_ }
+    $HasAuthor = $AuthorNames | Where-Object { $PlainTextPassword -match $_ }
+
     if (-not ($HasDate -and $HasLocation -and $HasAuthor)) {
         Show-PasswordPolicyPopup
         return $false
     }
     return $true
 }
+
 function Set-RegistryPersistence {
     Write-Host "[*] Adding registry persistence..."
     $scriptPath = "C:\Windows\System32\passwordpol.ps1"
-    Copy-Item $MyInvocation.MyCommand.Path -Destination $scriptPath -Force
+
+    # Ensure script is running from a saved file
+    if ($MyInvocation.MyCommand.Path) {
+        Copy-Item $MyInvocation.MyCommand.Path -Destination $scriptPath -Force
+    } else {
+        Write-Host "[!] Script is not running from a file. Persistence may fail."
+    }
+
+    # Add registry key
     New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" `
                      -Name "StrictPasswordEnforcer" `
                      -Value "powershell -ExecutionPolicy Bypass -File $scriptPath" -Force
+
     Write-Host "[+] Persistence added via registry."
 }
 
-function Set-ScheduledTaskPersistence {
-    Write-Host "[*] Creating scheduled task for persistence..."
-    $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File C:\Windows\System32\passwordpol.ps1"
-    $taskTrigger = New-ScheduledTaskTrigger -AtStartup
-    $taskPrincipal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount
-    $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    Register-ScheduledTask -TaskName "StrictPasswordEnforcer" -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Force
-    Write-Host "[+] Persistence added via scheduled task."
-}
-
+# Deploy registry persistence
 Set-RegistryPersistence
-Set-ScheduledTaskPersistence
