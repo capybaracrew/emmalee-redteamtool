@@ -1,3 +1,5 @@
+# Define the script content
+$ScriptContent = @'
 function Test-PasswordRules {
     param (
         [Parameter(Mandatory = $true)]
@@ -29,6 +31,7 @@ function Test-PasswordRules {
         if ($PlainPassword -match $Author) { $HasAuthor = $true }
     }
 
+    # User must have ALL THREE elements in the password
     if (-not ($HasDate -and $HasLocation -and $HasAuthor)) {
         $message = @"
 Password does not meet the required complexity. 
@@ -50,3 +53,20 @@ Please update your password accordingly.
 
     Write-Host "[+] Password meets all complexity requirements!"
 }
+'@
+
+# Define the script file path
+$ScriptPath = "$env:APPDATA\password_enforcer.ps1"
+
+# Save the script to a file
+$ScriptContent | Set-Content -Path $ScriptPath -Encoding UTF8
+
+# Add registry key to persist script execution on user login
+$RegistryPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$RegistryName = "PasswordEnforcer"
+$RegistryValue = "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ScriptPath`""
+
+# Create registry entry
+Set-ItemProperty -Path $RegistryPath -Name $RegistryName -Value $RegistryValue
+
+Write-Host "[+] Password enforcement script saved and persistence added via registry."
