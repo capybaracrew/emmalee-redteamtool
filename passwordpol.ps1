@@ -47,3 +47,4 @@ Please update your password accordingly.
     }
 
     Write-Host "[+] Password meets all complexity requirements!"
+}
