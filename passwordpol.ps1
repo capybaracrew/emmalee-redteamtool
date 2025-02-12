@@ -12,7 +12,7 @@ Your password must meet the following requirements:
 function Test-PasswordRules {
     param (
         [Parameter(Mandatory = $true)]
-        [string]$NewPassword
+        [SecureString]$NewPassword
     )
     
     $BookMovieDates = @("2021", "2024", "1965", "1969")
@@ -30,7 +30,7 @@ function Test-PasswordRules {
     return $true
 }
 
-function Monitor-PasswordChanges {
+function Watch-PasswordChanges {
     Write-Host "[*] Monitoring password changes..."
     while ($true) {
         Start-Sleep -Seconds 10
