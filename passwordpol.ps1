@@ -4,6 +4,9 @@ function Test-PasswordRules {
         [SecureString]$NewPassword
     )
 
+    # Load Windows Forms for MessageBox
+    Add-Type -AssemblyName System.Windows.Forms
+
     # Convert SecureString to Plain Text (Only for Validation, Avoid Storing!)
     $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($NewPassword)
     $PlainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
@@ -40,9 +43,9 @@ Please update your password accordingly.
         
         # Show the MessageBox to the user
         [System.Windows.Forms.MessageBox]::Show($message, "Password Complexity Requirement", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
-        
+
         Write-Host "[!] Password does not meet the complexity requirements. Please try again."
-        exit 1
+        return
     }
 
     Write-Host "[+] Password meets all complexity requirements!"
